@@ -1,176 +1,155 @@
 import 'dotenv/config';
 import express from 'express';
-import cors from 'cors';
 import { readFileSync } from 'fs';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
+import { paymentMiddleware } from '@x402-avm/express';
+import { x402ResourceServer, HTTPFacilitatorClient } from '@x402-avm/core/server';
+import { ExactAvmScheme } from '@x402-avm/avm/exact/server';
+import * as avm from '@x402-avm/avm';
+import * as ext from '@x402-avm/extensions';
 import { fetchCompanyProfile, scoreRisk } from './intelligence.js';
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
+// ── Config ───────────────────────────────────────────────────────────────────
+const WALLET = process.env.WALLET_ADDRESS;
+const FACILITATOR = process.env.FACILITATOR_URL || 'https://facilitator.goplausible.xyz';
+// Algorand mainnet CAIP-2 id and mainnet USDC ASA (fallbacks if the package doesn't export them)
+const NETWORK = avm.ALGORAND_MAINNET_CAIP2 || 'algorand:wGHE2Pwdvd7S12BL5FaOP20EGYesN73ktiC1qzkkit8=';
+const USDC = avm.USDC_MAINNET_ASA_ID || 31566704;
+
+if (!WALLET) {
+  console.error('WALLET_ADDRESS is not set — refusing to start');
+  process.exit(1);
+}
+
+// ── CORS ─────────────────────────────────────────────────────────────────────
 app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', '*');
+  res.header('Access-Control-Expose-Headers', '*');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
 app.use(express.json());
 
-// ── Manual x402 middleware ───────────────────────────────────────────────────
-// Returns proper HTTP 402 with Algorand payment requirements.
-// GoPlausible facilitator verifies payment when X-Payment header is present.
-function x402Gate(req, res, next) {
-  const payment = req.headers['x-payment'];
-  if (!payment) {
-    return res.status(402).json({
-      error: 'Payment Required',
-      x402Version: 1,
-      accepts: [{
-        scheme: 'exact',
-        asset: 'USDC',
-        asaId: parseInt(process.env.USDC_ASA_ID || '31566704'),
-        amount: '500000', // 0.50 USDC in microUSDC (6 decimals)
-        network: process.env.ALGORAND_NETWORK || 'ALGORAND_Mainnet_CAIP2',
-        recipient: process.env.WALLET_ADDRESS,
-        description: 'UK company risk profile — Companies House data synthesised by Claude',
-        tag: 'x402-global-challenge',
-      }],
-      facilitatorUrl: process.env.FACILITATOR_URL || 'https://facilitator.goplausible.xyz',
+// ── x402 resource server (verify + settle via GoPlausible) ───────────────────
+const facilitatorClient = new HTTPFacilitatorClient({ url: FACILITATOR });
+const x402Server = new x402ResourceServer(facilitatorClient);
+x402Server.register(NETWORK, new ExactAvmScheme());
+
+let discovery;
+try {
+  if (ext.bazaarResourceServerExtension) {
+    x402Server.registerExtension(ext.bazaarResourceServerExtension);
+  }
+  if (ext.declareDiscoveryExtension) {
+    discovery = ext.declareDiscoveryExtension({
+      output: {
+        example: {
+          company_number: '00445790',
+          company_name: 'MARKS AND SPENCER PLC',
+          risk_score: 12,
+          risk_level: 'low',
+          flags: [{ type: 'ok', icon: '✓', text: 'Accounts filed on time' }],
+          recommendation: 'Proceed with standard commercial terms.',
+        },
+      },
     });
   }
-  // Payment header present — verify with facilitator then serve
-  next();
+} catch (e) {
+  console.log('Bazaar discovery extension not enabled:', e.message);
 }
 
-app.use('/company', x402Gate);
+app.use(
+  paymentMiddleware(
+    {
+      'GET /company/*': {
+        accepts: [
+          {
+            scheme: 'exact',
+            price: '$0.50',
+            network: NETWORK,
+            payTo: WALLET,
+            extra: { asset: USDC, tag: 'x402-global-challenge' },
+          },
+        ],
+        description:
+          'UK company risk profile: risk score 0-100, flags, ownership summary and recommendation from Companies House data.',
+        mimeType: 'application/json',
+        ...(discovery ? { extensions: discovery } : {}),
+      },
+    },
+    x402Server,
+  ),
+);
 
-// ── Demo endpoint (no payment required — for demo UI only) ───────────────────
-app.get('/demo/:number', async (req, res) => {
-  // CORS headers so the artifact can call this
-  res.header('Access-Control-Allow-Origin', '*');
-  res.header('Access-Control-Allow-Headers', '*');
-
+// ── Paid endpoint (only reached after payment is verified) ───────────────────
+app.get('/company/:number', async (req, res) => {
   const { number } = req.params;
   if (!/^[A-Z0-9]{6,8}$/i.test(number)) {
-    return res.status(400).json({ error: 'Invalid company number' });
+    return res.status(400).json({ error: 'Invalid company number e.g. 00445790' });
   }
-
   try {
     const raw = await fetchCompanyProfile(number.toUpperCase());
     raw._number = number.toUpperCase();
     const profile = await scoreRisk(raw);
-    res.json({ ...profile, _demo: true });
-  } catch (err) {
-    console.error(`Demo error for ${number}:`, err.message);
-    res.status(500).json({ error: 'Failed to generate profile', detail: err.message });
-  }
-});
-
-// ── Core endpoint ────────────────────────────────────────────────────────────
-app.get('/company/:number', async (req, res) => {
-  const { number } = req.params;
-
-  if (!/^[A-Z0-9]{6,8}$/i.test(number)) {
-    return res.status(400).json({
-      error: 'Invalid company number. Use 6–8 alphanumeric characters e.g. 00445790',
-    });
-  }
-
-  try {
-    const raw = await fetchCompanyProfile(number.toUpperCase());
-
-    if (!raw.profile) {
-      return res.status(404).json({
-        error: `Company ${number} not found in Companies House register`,
-      });
-    }
-
-    const profile = await scoreRisk(raw);
     res.json(profile);
-
   } catch (err) {
     console.error(`Error processing ${number}:`, err.message);
     res.status(500).json({ error: 'Failed to generate risk profile', detail: err.message });
   }
 });
 
-// ── Health check (free) ──────────────────────────────────────────────────────
+// ── Free endpoints ───────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'CompanyLens',
-    version: '1.0.0',
-    network: process.env.ALGORAND_NETWORK || 'not set',
+    version: '1.1.0',
+    network: NETWORK,
     price: '0.50 USDC per lookup',
-    wallet: process.env.WALLET_ADDRESS
-      ? `${process.env.WALLET_ADDRESS.slice(0, 8)}...`
-      : 'not set',
+    wallet: `${WALLET.slice(0, 8)}...`,
+    facilitator: FACILITATOR,
   });
 });
 
-// ── Bazaar discovery ─────────────────────────────────────────────────────────
 app.get('/.well-known/x402.json', (req, res) => {
   res.json({
     name: 'CompanyLens',
-    description: 'UK company risk intelligence. Risk score 0-100, flags, ownership, and recommendation from live Companies House data, synthesised by Claude.',
-    version: '1.0.0',
-    endpoints: [{
-      path: '/company/{number}',
-      method: 'GET',
-      description: 'Risk profile for any UK company by Companies House registration number.',
-      price: '0.50 USDC',
-      network: process.env.ALGORAND_NETWORK || 'ALGORAND_Mainnet_CAIP2',
-      input: { number: 'Companies House number e.g. 00445790' },
-      output_example: {
-        risk_score: 12,
-        risk_level: 'low',
-        company_name: 'EXAMPLE LTD',
-        flags: [{ type: 'ok', text: 'Accounts filed on time' }],
-        recommendation: 'Proceed with standard commercial terms.',
-      },
-    }],
+    description: 'UK company risk intelligence — risk score, flags, ownership and recommendation per query.',
+    endpoints: [{ path: '/company/{number}', method: 'GET', price: '0.50 USDC', network: NETWORK }],
     tag: 'x402-global-challenge',
   });
 });
 
-// ── llms.txt ─────────────────────────────────────────────────────────────────
 app.get('/llms.txt', (req, res) => {
   res.type('text/plain').send(`# CompanyLens
 > UK company risk intelligence API
 
-Payment: 0.50 USDC per request via x402 on Algorand. No API keys required.
+Payment: 0.50 USDC per request via x402 on Algorand mainnet. No API keys required.
 
 ## Endpoint
 GET /company/{number}
 Returns: risk_score (0-100), risk_level, flags, ownership, recommendation
-
-## Use cases
-- AI agent due diligence before contract execution
-- Supplier onboarding risk screening
-- KYB checks in agentic workflows
 `);
 });
 
-// ── Landing page ─────────────────────────────────────────────────────────────
 app.get('/', (req, res) => {
   try {
-    const html = readFileSync(join(__dirname, '../public/index.html'), 'utf8');
-    res.type('html').send(html);
+    res.type('html').send(readFileSync(join(__dirname, '../public/index.html'), 'utf8'));
   } catch {
-    res.json({ service: 'CompanyLens', docs: '/health', endpoint: '/company/:number' });
+    res.json({ service: 'CompanyLens', health: '/health', endpoint: '/company/:number' });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`\nCompanyLens running on port ${PORT}`);
-  console.log(`Network:  ${process.env.ALGORAND_NETWORK || 'not set'}`);
-  console.log(`Wallet:   ${process.env.WALLET_ADDRESS ? process.env.WALLET_ADDRESS.slice(0, 8) + '...' : 'not set'}`);
-  console.log(`\nEndpoints:`);
-  console.log(`  GET /company/:number  — 0.50 USDC (x402 gated)`);
-  console.log(`  GET /health           — free`);
-  console.log(`  GET /.well-known/x402.json`);
-  console.log(`  GET /llms.txt\n`);
+  console.log(`CompanyLens running on port ${PORT}`);
+  console.log(`Network: ${NETWORK}`);
+  console.log(`Wallet:  ${WALLET.slice(0, 8)}...`);
+  console.log(`Facilitator: ${FACILITATOR}`);
 });
