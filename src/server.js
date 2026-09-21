@@ -54,9 +54,7 @@ app.get('/demo/:number', async (req, res) => {
 
   try {
     const raw = await fetchCompanyProfile(number.toUpperCase());
-    if (!raw.profile) {
-      return res.status(404).json({ error: `Company ${number} not found` });
-    }
+    raw._number = number.toUpperCase();
     const profile = await scoreRisk(raw);
     res.json({ ...profile, _demo: true });
   } catch (err) {
