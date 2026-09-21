@@ -1,21 +1,17 @@
 {
   "name": "companylens-api",
   "version": "1.0.0",
-  "description": "UK company risk intelligence API — pay-per-request via x402 on Algorand",
+  "description": "UK company risk intelligence API",
   "type": "module",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "node --watch src/server.js",
-    "test:payment": "node src/test-payment.js"
+    "start": "node src/server.js"
   },
   "engines": {
     "node": ">=20.0.0"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.30.0",
-    "@x402-avm/express": "*",
-    "algosdk": "^3.0.0",
     "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
