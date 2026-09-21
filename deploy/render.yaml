@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: companylens-api
+    env: node
+    plan: starter          # $7/month — sufficient for competition
+    buildCommand: npm install
+    startCommand: node src/server.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000         # Render assigns this automatically
+      - key: CH_API_KEY
+        sync: false          # Set in Render dashboard
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: WALLET_ADDRESS
+        sync: false
+      - key: ALGORAND_NETWORK
+        value: ALGORAND_Mainnet_CAIP2
+      - key: USDC_ASA_ID
+        value: "31566704"
+      - key: FACILITATOR_URL
+        value: https://facilitator.goplausible.xyz
+      - key: SERVICE_DOMAIN
+        sync: false          # e.g. https://companylens-api.onrender.com

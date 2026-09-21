@@ -1,0 +1,16 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+startCommand = "node src/server.js"
+healthcheckPath = "/health"
+healthcheckTimeout = 30
+restartPolicyType = "on-failure"
+restartPolicyMaxRetries = 3
+
+# Set these env vars in the Railway dashboard:
+# CH_API_KEY, ANTHROPIC_API_KEY, WALLET_ADDRESS, SERVICE_DOMAIN
+# These are pre-set:
+# ALGORAND_NETWORK=ALGORAND_Mainnet_CAIP2
+# USDC_ASA_ID=31566704
+# FACILITATOR_URL=https://facilitator.goplausible.xyz

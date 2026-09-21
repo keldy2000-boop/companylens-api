@@ -1,0 +1,740 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CompanyLens — UK Company Risk Intelligence API</title>
+<meta name="description" content="Structured risk profiles for any UK company. Pay 0.50 USDC per query via x402 on Algorand. No accounts, no API keys — built for AI agents doing autonomous due diligence.">
+
+<!-- OpenGraph — scraped by GoPlausible Bazaar enrichment engine daily -->
+<meta property="og:title" content="CompanyLens — UK Company Risk Intelligence API">
+<meta property="og:description" content="Structured risk profiles for any UK company. Pay 0.50 USDC per query via x402 on Algorand. No accounts, no API keys — built for AI agents doing autonomous due diligence.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://companylens.xyz">
+<meta property="og:image" content="https://companylens.xyz/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+
+<!-- Twitter card -->
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="CompanyLens — UK Company Risk Intelligence API">
+<meta name="twitter:description" content="0.50 USDC per lookup · x402 · Algorand · No subscription required">
+
+<!-- Favicon -->
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🔍</text></svg>">
+
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500&family=IBM+Plex+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:       #0b0f14;
+  --surface:  #111820;
+  --border:   #1e2a36;
+  --mid:      #4a6070;
+  --dim:      #2a3a48;
+  --text:     #c8d8e4;
+  --bright:   #e8f4ff;
+  --green:    #00c97a;
+  --green-dim:#00382a;
+  --amber:    #f0a500;
+  --amber-dim:#2a1e00;
+  --red:      #e04040;
+  --red-dim:  #2a0808;
+  --accent:   #3a8fff;
+  --mono: 'IBM Plex Mono', monospace;
+  --sans: 'IBM Plex Sans', system-ui, sans-serif;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+*, *::before, *::after { box-sizing: inherit; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--mono);
+  font-size: 14px;
+  line-height: 1.6;
+  min-height: 100%;
+}
+
+/* ── LAYOUT ── */
+.wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+/* ── NAV ── */
+nav {
+  border-bottom: 1px solid var(--border);
+  padding: 16px 0;
+  position: sticky;
+  top: env(safe-area-inset-top, 0px);
+  background: var(--bg);
+  z-index: 10;
+}
+.nav-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+}
+.logo {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--bright);
+  text-decoration: none;
+  letter-spacing: -0.3px;
+}
+.logo span { color: var(--accent); }
+.nav-links {
+  display: flex;
+  gap: 20px;
+  margin-left: auto;
+  list-style: none;
+}
+.nav-links a {
+  font-size: 12px;
+  color: var(--mid);
+  text-decoration: none;
+  transition: color 0.15s;
+}
+.nav-links a:hover { color: var(--text); }
+.nav-pill {
+  font-size: 11px;
+  padding: 4px 12px;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 3px;
+  text-decoration: none;
+  font-family: var(--sans);
+}
+
+/* ── HERO ── */
+.hero {
+  padding: 72px 0 56px;
+  border-bottom: 1px solid var(--border);
+}
+.hero-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: start;
+}
+.hero-kicker {
+  font-size: 11px;
+  color: var(--green);
+  letter-spacing: 0.06em;
+  margin-bottom: 16px;
+  font-family: var(--mono);
+}
+h1 {
+  font-family: var(--sans);
+  font-size: 36px;
+  font-weight: 300;
+  color: var(--bright);
+  line-height: 1.2;
+  letter-spacing: -0.5px;
+  margin-bottom: 20px;
+}
+h1 strong { font-weight: 500; }
+.hero-body {
+  font-size: 14px;
+  color: var(--text);
+  line-height: 1.7;
+  margin-bottom: 28px;
+  max-width: 46ch;
+}
+.hero-cta {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.btn-primary {
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 10px 20px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 3px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-ghost {
+  font-family: var(--mono);
+  font-size: 13px;
+  padding: 10px 20px;
+  background: none;
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-block;
+}
+.btn-ghost:hover { border-color: var(--mid); }
+
+/* ── TERMINAL PREVIEW ── */
+.terminal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.terminal-bar {
+  background: var(--dim);
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.dot { width: 10px; height: 10px; border-radius: 50%; }
+.dot-r { background: #e04040; }
+.dot-a { background: #f0a500; }
+.dot-g { background: #00c97a; }
+.terminal-label { font-size: 11px; color: var(--mid); margin-left: 8px; }
+.terminal-body { padding: 18px; font-size: 12px; line-height: 1.8; overflow-x: auto; }
+.t-cmd { color: var(--mid); }
+.t-url { color: var(--accent); }
+.t-k { color: var(--amber); }
+.t-v { color: var(--green); }
+.t-s { color: var(--text); }
+.t-num { color: #a78bfa; }
+.t-comment { color: var(--mid); font-style: italic; }
+
+/* ── STATS STRIP ── */
+.stats {
+  border-bottom: 1px solid var(--border);
+  padding: 24px 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0;
+}
+.stat {
+  padding: 8px 24px;
+  border-right: 1px solid var(--border);
+}
+.stat:first-child { padding-left: 0; }
+.stat:last-child { border-right: none; }
+.stat-num {
+  font-family: var(--sans);
+  font-size: 28px;
+  font-weight: 300;
+  color: var(--bright);
+  letter-spacing: -1px;
+}
+.stat-label { font-size: 11px; color: var(--mid); margin-top: 2px; }
+
+/* ── SECTIONS ── */
+section { padding: 56px 0; border-bottom: 1px solid var(--border); }
+section:last-of-type { border-bottom: none; }
+h2 {
+  font-family: var(--sans);
+  font-size: 22px;
+  font-weight: 400;
+  color: var(--bright);
+  margin-bottom: 8px;
+  letter-spacing: -0.3px;
+}
+.section-sub {
+  color: var(--mid);
+  font-size: 13px;
+  margin-bottom: 32px;
+  max-width: 60ch;
+}
+
+/* ── USE CASES ── */
+.cases { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; background: var(--border); border: 1px solid var(--border); }
+.case {
+  background: var(--bg);
+  padding: 24px;
+}
+.case-role {
+  font-size: 11px;
+  color: var(--accent);
+  margin-bottom: 8px;
+  letter-spacing: 0.04em;
+}
+.case-title {
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--bright);
+  margin-bottom: 8px;
+}
+.case-body { font-size: 12px; color: var(--mid); line-height: 1.6; }
+
+/* ── HOW IT WORKS ── */
+.flow { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--border); }
+.flow-step {
+  display: grid;
+  grid-template-columns: 48px 1fr;
+  border-bottom: 1px solid var(--border);
+}
+.flow-step:last-child { border-bottom: none; }
+.flow-n {
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 20px 0;
+  font-size: 11px;
+  color: var(--dim);
+  border-right: 1px solid var(--border);
+}
+.flow-content { padding: 20px 24px; }
+.flow-title {
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--bright);
+  margin-bottom: 4px;
+}
+.flow-desc { font-size: 12px; color: var(--mid); }
+.flow-code {
+  font-size: 11px;
+  color: var(--green);
+  margin-top: 6px;
+  font-family: var(--mono);
+}
+
+/* ── SCORING TABLE ── */
+.score-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+.score-table th {
+  text-align: left;
+  padding: 8px 16px;
+  font-size: 11px;
+  color: var(--mid);
+  border-bottom: 1px solid var(--border);
+  font-weight: 400;
+}
+.score-table td {
+  padding: 9px 16px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.score-table tr:last-child td { border-bottom: none; }
+.score-table tr:hover td { background: var(--surface); }
+.weight {
+  font-family: var(--sans);
+  font-size: 16px;
+  font-weight: 300;
+  color: var(--red);
+  text-align: right;
+}
+.weight.warn { color: var(--amber); }
+.signal-text { color: var(--text); }
+
+/* ── PRICING ── */
+.pricing { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.price-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 28px;
+}
+.price-card.featured { border-color: var(--accent); }
+.price-amount {
+  font-family: var(--sans);
+  font-size: 32px;
+  font-weight: 300;
+  color: var(--bright);
+  letter-spacing: -1px;
+  margin-bottom: 4px;
+}
+.price-unit { font-size: 11px; color: var(--mid); margin-bottom: 20px; }
+.price-features { list-style: none; display: flex; flex-direction: column; gap: 8px; }
+.price-features li {
+  font-size: 12px;
+  color: var(--text);
+  display: flex;
+  gap: 8px;
+}
+.price-features li::before { content: '✓'; color: var(--green); flex-shrink: 0; }
+
+/* ── CODE TABS ── */
+.tabs { display: flex; gap: 0; border-bottom: 1px solid var(--border); margin-bottom: 0; }
+.tab {
+  font-family: var(--mono);
+  font-size: 12px;
+  padding: 8px 16px;
+  background: none;
+  color: var(--mid);
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  margin-bottom: -1px;
+}
+.tab.active { color: var(--bright); border-bottom-color: var(--accent); }
+.code-panel { display: none; background: var(--surface); border: 1px solid var(--border); border-top: none; padding: 20px; font-size: 12px; line-height: 1.8; overflow-x: auto; }
+.code-panel.active { display: block; }
+
+/* ── FOOTER ── */
+footer {
+  border-top: 1px solid var(--border);
+  padding: 24px 0;
+  font-size: 11px;
+  color: var(--mid);
+}
+.footer-inner {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 0 24px;
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.footer-links { display: flex; gap: 20px; }
+.footer-links a { color: var(--mid); text-decoration: none; }
+.footer-links a:hover { color: var(--text); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 700px) {
+  .hero-grid { grid-template-columns: 1fr; }
+  .stats { grid-template-columns: 1fr 1fr; }
+  .stat { border-right: none; border-bottom: 1px solid var(--border); }
+  .cases { grid-template-columns: 1fr; }
+  .pricing { grid-template-columns: 1fr; }
+  h1 { font-size: 26px; }
+  .nav-links { display: none; }
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f5f7f9;
+    --surface: #ffffff;
+    --border: #dde3e8;
+    --mid: #7a8c98;
+    --dim: #c8d4dc;
+    --text: #2a3a48;
+    --bright: #0b1520;
+    --green-dim: #e6f9f2;
+    --amber-dim: #fdf6e3;
+    --red-dim: #fdf0f0;
+  }
+}
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-inner">
+    <a href="/" class="logo">Company<span>Lens</span></a>
+    <ul class="nav-links">
+      <li><a href="#how">How it works</a></li>
+      <li><a href="#scoring">Scoring</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+      <li><a href="#integrate">Integrate</a></li>
+    </ul>
+    <a href="https://claude.ai/artifact/C5UdD2J4ghkCXwzdLnk52q" class="nav-pill" target="_blank">Try demo</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-grid">
+    <div>
+      <div class="hero-kicker">x402 · Algorand · Companies House</div>
+      <h1>UK company risk intelligence,<br><strong>priced per query.</strong></h1>
+      <p class="hero-body">CompanyLens returns a structured risk profile for any UK-registered company — score, flags, ownership, and recommendation — from live Companies House data, synthesised by Claude. No API key required. No subscription. Agents pay 0.50 USDC per request on Algorand and get the data.</p>
+      <div class="hero-cta">
+        <a href="https://claude.ai/artifact/C5UdD2J4ghkCXwzdLnk52q" class="btn-primary" target="_blank">Try the demo</a>
+        <a href="#integrate" class="btn-ghost">Integration docs</a>
+      </div>
+    </div>
+
+    <div class="terminal">
+      <div class="terminal-bar">
+        <div class="dot dot-r"></div>
+        <div class="dot dot-a"></div>
+        <div class="dot dot-g"></div>
+        <span class="terminal-label">GET /company/00445790</span>
+      </div>
+      <div class="terminal-body">
+<span class="t-comment"># No auth header. Agent pays via x402.</span>
+<span class="t-cmd">$</span> <span class="t-url">curl https://api.companylens.xyz/company/00445790</span>
+
+<span class="t-comment"># Server returns 402 with payment terms:</span>
+<span class="t-k">HTTP/1.1</span> <span class="t-num">402</span> Payment Required
+<span class="t-k">X-Payment-Required:</span> <span class="t-v">{
+  "scheme": "exact",
+  "asset": "USDC",
+  "amount": "0.50",
+  "network": "algorand:mainnet"
+}</span>
+
+<span class="t-comment"># Agent pays → retries → gets profile:</span>
+<span class="t-k">{</span>
+  <span class="t-k">"company_name":</span> <span class="t-v">"MARKS AND SPENCER PLC"</span>,
+  <span class="t-k">"risk_score":</span> <span class="t-num">12</span>,
+  <span class="t-k">"risk_level":</span> <span class="t-v">"low"</span>,
+  <span class="t-k">"recommendation":</span> <span class="t-v">"Proceed with
+    standard commercial terms."</span>,
+  <span class="t-k">"flags":</span> <span class="t-s">[ ... ]</span>
+<span class="t-k">}</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- STATS -->
+<div class="stats">
+  <div class="stat">
+    <div class="stat-num">5M+</div>
+    <div class="stat-label">UK companies queryable</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">0.50</div>
+    <div class="stat-label">USDC per lookup</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">&lt;3s</div>
+    <div class="stat-label">median response time</div>
+  </div>
+  <div class="stat">
+    <div class="stat-num">0</div>
+    <div class="stat-label">accounts or subscriptions required</div>
+  </div>
+</div>
+
+<!-- USE CASES -->
+<section>
+  <h2>Built for agents doing real work</h2>
+  <p class="section-sub">CompanyLens fits into any agentic workflow that touches UK counterparties. The agent pays per call — it does not need an account, a credit card, or prior authorisation.</p>
+  <div class="cases">
+    <div class="case">
+      <div class="case-role">Procurement agent</div>
+      <div class="case-title">Supplier onboarding</div>
+      <div class="case-body">Before raising a purchase order or executing a contract, the agent screens the supplier's Companies House record. Red flags surface before commitment, not after.</div>
+    </div>
+    <div class="case">
+      <div class="case-role">Accounts payable agent</div>
+      <div class="case-title">Payment release</div>
+      <div class="case-body">Agent checks the payee company before releasing funds. Dissolved companies, overdue accounts, and director changes are caught at the payment gate.</div>
+    </div>
+    <div class="case">
+      <div class="case-role">Legal / contracts agent</div>
+      <div class="case-title">KYB verification</div>
+      <div class="case-body">Know Your Business checks run automatically as part of contract execution. PSC records, active status, and registration age are returned in a single structured call.</div>
+    </div>
+    <div class="case">
+      <div class="case-role">Credit underwriting agent</div>
+      <div class="case-title">Risk triage</div>
+      <div class="case-body">Agent screens a portfolio of companies in bulk before a human reviewer sees any of them. Risk scores sort cases by priority — reviewers focus time on what matters.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section id="how">
+  <h2>How a lookup works</h2>
+  <p class="section-sub">The x402 payment flow is handled by your agent's HTTP client. Nothing to configure on the buyer side — the protocol is self-describing.</p>
+  <div class="flow">
+    <div class="flow-step">
+      <div class="flow-n">01</div>
+      <div class="flow-content">
+        <div class="flow-title">Agent sends a plain GET request</div>
+        <div class="flow-desc">No auth header, no API key. The endpoint is public.</div>
+        <div class="flow-code">GET https://api.companylens.xyz/company/09280351</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-n">02</div>
+      <div class="flow-content">
+        <div class="flow-title">Server returns HTTP 402 with payment terms</div>
+        <div class="flow-desc">Response includes asset, amount, network, and recipient wallet. The x402 client reads this automatically.</div>
+        <div class="flow-code">HTTP 402 · X-Payment-Required: { asset: "USDC", amount: "0.50", network: "algorand:mainnet" }</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-n">03</div>
+      <div class="flow-content">
+        <div class="flow-title">Agent signs and submits payment to Algorand</div>
+        <div class="flow-desc">The x402 client constructs an Algorand USDC transaction, submits it to the GoPlausible facilitator, and receives a signed payment proof.</div>
+        <div class="flow-code">USDC ASA 31566704 · GoPlausible facilitator · instant finality</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-n">04</div>
+      <div class="flow-content">
+        <div class="flow-title">Request retried with payment proof</div>
+        <div class="flow-desc">Same request, same URL — this time with an X-Payment header containing the proof.</div>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="flow-n">05</div>
+      <div class="flow-content">
+        <div class="flow-title">Server verifies, fetches data, returns profile</div>
+        <div class="flow-desc">Middleware calls the facilitator to confirm on-chain settlement. Companies House data is fetched across five parallel endpoints. Claude synthesises the risk profile. JSON returned.</div>
+        <div class="flow-code">risk_score · risk_level · flags · ownership · recommendation</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SCORING MODEL -->
+<section id="scoring">
+  <h2>How the risk score is calculated</h2>
+  <p class="section-sub">The score (0–100) is computed deterministically from Companies House data before Claude sees it. Claude synthesises the output but cannot change the score — it is reproducible and auditable.</p>
+  <table class="score-table">
+    <thead>
+      <tr>
+        <th>Signal</th>
+        <th style="text-align:right">Score impact</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="signal-text">Company dissolved</td><td class="weight">+50</td></tr>
+      <tr><td class="signal-text">Liquidation / administration / receivership</td><td class="weight">+45</td></tr>
+      <tr><td class="signal-text">Gazette or dissolution notice in recent filings</td><td class="weight">+30</td></tr>
+      <tr><td class="signal-text">Accounts overdue more than 60 days</td><td class="weight">+25</td></tr>
+      <tr><td class="signal-text">No active directors on record</td><td class="weight">+20</td></tr>
+      <tr><td class="signal-text">Incorporated less than 12 months</td><td class="weight">+20</td></tr>
+      <tr><td class="signal-text">Non-active status (other)</td><td class="weight">+20</td></tr>
+      <tr><td class="signal-text">Accounts overdue 1–60 days</td><td class="weight warn">+15</td></tr>
+      <tr><td class="signal-text">No PSC recorded — beneficial ownership unclear</td><td class="weight warn">+15</td></tr>
+      <tr><td class="signal-text">Incorporated 1–2 years</td><td class="weight warn">+12</td></tr>
+      <tr><td class="signal-text">3 or more director resignations in last 12 months</td><td class="weight warn">+12</td></tr>
+      <tr><td class="signal-text">Confirmation statement overdue</td><td class="weight warn">+10</td></tr>
+      <tr><td class="signal-text">More than 8 outstanding charges</td><td class="weight warn">+8</td></tr>
+      <tr><td class="signal-text">Incorporated 2–5 years</td><td class="weight warn">+6</td></tr>
+      <tr><td class="signal-text">1–2 director resignations in last 12 months</td><td class="weight warn">+4</td></tr>
+    </tbody>
+  </table>
+  <p style="font-size:11px;color:var(--mid);margin-top:12px;">Score bands: low = 0–29 · medium = 30–59 · high = 60–100. Capped at 100.</p>
+</section>
+
+<!-- PRICING -->
+<section id="pricing">
+  <h2>Pricing</h2>
+  <p class="section-sub">No subscription, no tier, no account. Pay per query in USDC on Algorand — the x402 client handles payment automatically.</p>
+  <div class="pricing">
+    <div class="price-card featured">
+      <div class="price-amount">$0.50</div>
+      <div class="price-unit">USDC · per lookup · Algorand mainnet</div>
+      <ul class="price-features">
+        <li>Full Companies House profile — 5 endpoint parallel fetch</li>
+        <li>Deterministic risk score 0–100</li>
+        <li>Colour-coded flags with specific data points</li>
+        <li>PSC ownership summary</li>
+        <li>Director disqualification check</li>
+        <li>Claude-synthesised plain-English summary</li>
+        <li>Direct actionable recommendation</li>
+        <li>Raw JSON — agent-ready structured output</li>
+      </ul>
+    </div>
+    <div class="price-card">
+      <div class="price-amount">$3.50</div>
+      <div class="price-unit">USDC · bulk 10-pack · single request</div>
+      <ul class="price-features">
+        <li>Up to 10 companies in one POST /companies request</li>
+        <li>All profiles run in parallel</li>
+        <li>Same structured output per company</li>
+        <li>Ideal for onboarding flows and portfolio screening</li>
+        <li>30% saving vs individual lookups</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- INTEGRATE -->
+<section id="integrate">
+  <h2>Integrate in minutes</h2>
+  <p class="section-sub">Your x402 client handles the payment flow automatically. Three lines of setup, then call the endpoint like any other API.</p>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('node',this)">Node.js</button>
+    <button class="tab" onclick="showTab('python',this)">Python</button>
+    <button class="tab" onclick="showTab('agent',this)">AI agent</button>
+  </div>
+
+  <div class="code-panel active" id="tab-node">
+<span class="t-comment">// npm install x402-fetch algosdk</span>
+<span class="t-k">import</span> { wrapFetchWithPayment } <span class="t-k">from</span> <span class="t-v">'x402-fetch'</span>;
+
+<span class="t-k">const</span> fetch = <span class="t-s">wrapFetchWithPayment</span>(globalThis.fetch, {
+  wallet: process.env.<span class="t-v">ALGORAND_PRIVATE_KEY</span>,
+  network: <span class="t-v">'ALGORAND_Mainnet_CAIP2'</span>,
+});
+
+<span class="t-k">const</span> profile = <span class="t-k">await</span> fetch(
+  <span class="t-v">'https://api.companylens.xyz/company/00445790'</span>
+).<span class="t-s">then</span>(r => r.json());
+
+<span class="t-comment">// profile.risk_score    → 0–100</span>
+<span class="t-comment">// profile.risk_level    → 'low' | 'medium' | 'high'</span>
+<span class="t-comment">// profile.flags         → [{type, icon, text}]</span>
+<span class="t-comment">// profile.recommendation → actionable string</span>
+  </div>
+
+  <div class="code-panel" id="tab-python">
+<span class="t-comment"># pip install "x402-avm[httpx]" algosdk</span>
+<span class="t-k">from</span> x402.client <span class="t-k">import</span> x402Client
+<span class="t-k">from</span> x402.avm <span class="t-k">import</span> AlgorandSigner
+<span class="t-k">import</span> os
+
+signer = AlgorandSigner(private_key=os.environ[<span class="t-v">"ALGORAND_KEY"</span>])
+client = x402Client(signer=signer, network=<span class="t-v">"ALGORAND_Mainnet_CAIP2"</span>)
+
+<span class="t-k">async with</span> client <span class="t-k">as</span> c:
+    profile = (<span class="t-k">await</span> c.get(
+        <span class="t-v">"https://api.companylens.xyz/company/09280351"</span>
+    )).json()
+
+<span class="t-comment"># profile["risk_score"], profile["flags"]</span>
+  </div>
+
+  <div class="code-panel" id="tab-agent">
+<span class="t-comment"># Claude / GPT tool definition</span>
+{
+  <span class="t-k">"name"</span>: <span class="t-v">"company_risk_check"</span>,
+  <span class="t-k">"description"</span>: <span class="t-v">"Returns a risk profile for any UK company
+    from Companies House data. Score 0–100, flags,
+    ownership, and recommendation. Costs 0.50 USDC
+    per call via x402 on Algorand."</span>,
+  <span class="t-k">"parameters"</span>: {
+    <span class="t-k">"company_number"</span>: {
+      <span class="t-k">"type"</span>: <span class="t-v">"string"</span>,
+      <span class="t-k">"description"</span>: <span class="t-v">"Companies House registration
+        number, 6–8 characters e.g. 00445790"</span>
+    }
+  }
+}
+
+<span class="t-comment"># Endpoint: GET /company/{number}</span>
+<span class="t-comment"># Payment: handled by x402 client middleware</span>
+<span class="t-comment"># No API key required on buyer side</span>
+  </div>
+</section>
+
+</div><!-- /wrap -->
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <span>CompanyLens · UK company risk intelligence · Built on Algorand x402</span>
+    <div class="footer-links">
+      <a href="/.well-known/x402.json">x402 descriptor</a>
+      <a href="/llms.txt">llms.txt</a>
+      <a href="https://github.com/YOUR_USERNAME/companylens-api" target="_blank">GitHub</a>
+      <a href="https://algorand.co/global-x402-challenge" target="_blank">x402 Challenge</a>
+    </div>
+  </div>
+</footer>
+
+<script>
+function showTab(name, btn) {
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.code-panel').forEach(p => p.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('tab-' + name).classList.add('active');
+}
+</script>
+
+</body>
+</html>
