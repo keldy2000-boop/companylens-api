@@ -41,6 +41,30 @@ function x402Gate(req, res, next) {
 
 app.use('/company', x402Gate);
 
+// ── Demo endpoint (no payment required — for demo UI only) ───────────────────
+app.get('/demo/:number', async (req, res) => {
+  // CORS headers so the artifact can call this
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', '*');
+
+  const { number } = req.params;
+  if (!/^[A-Z0-9]{6,8}$/i.test(number)) {
+    return res.status(400).json({ error: 'Invalid company number' });
+  }
+
+  try {
+    const raw = await fetchCompanyProfile(number.toUpperCase());
+    if (!raw.profile) {
+      return res.status(404).json({ error: `Company ${number} not found` });
+    }
+    const profile = await scoreRisk(raw);
+    res.json({ ...profile, _demo: true });
+  } catch (err) {
+    console.error(`Demo error for ${number}:`, err.message);
+    res.status(500).json({ error: 'Failed to generate profile', detail: err.message });
+  }
+});
+
 // ── Core endpoint ────────────────────────────────────────────────────────────
 app.get('/company/:number', async (req, res) => {
   const { number } = req.params;
