@@ -52,10 +52,10 @@ try {
       output: {
         example: {
           company_number: '00445790',
-          company_name: 'MARKS AND SPENCER PLC',
-          risk_score: 12,
+          company_name: 'TESCO PLC',
+          risk_score: 0,
           risk_level: 'low',
-          flags: [{ type: 'ok', icon: '✓', text: 'Accounts filed on time' }],
+          flags: [{ type: 'ok', icon: '✓', text: 'Accounts filing up to date' }],
           recommendation: 'Proceed with standard commercial terms.',
         },
       },
@@ -101,7 +101,7 @@ app.get('/company/:number', async (req, res) => {
     res.json(profile);
   } catch (err) {
     console.error(`Error processing ${number}:`, err.message);
-    res.status(500).json({ error: 'Failed to generate risk profile', detail: err.message });
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
@@ -110,7 +110,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'CompanyLens',
-    version: '1.1.0',
+    version: '1.2.0',
     network: NETWORK,
     price: '0.50 USDC per lookup',
     wallet: `${WALLET.slice(0, 8)}...`,
@@ -134,22 +134,4 @@ app.get('/llms.txt', (req, res) => {
 Payment: 0.50 USDC per request via x402 on Algorand mainnet. No API keys required.
 
 ## Endpoint
-GET /company/{number}
-Returns: risk_score (0-100), risk_level, flags, ownership, recommendation
-`);
-});
-
-app.get('/', (req, res) => {
-  try {
-    res.type('html').send(readFileSync(join(__dirname, '../public/index.html'), 'utf8'));
-  } catch {
-    res.json({ service: 'CompanyLens', health: '/health', endpoint: '/company/:number' });
-  }
-});
-
-app.listen(PORT, () => {
-  console.log(`CompanyLens running on port ${PORT}`);
-  console.log(`Network: ${NETWORK}`);
-  console.log(`Wallet:  ${WALLET.slice(0, 8)}...`);
-  console.log(`Facilitator: ${FACILITATOR}`);
-});
+GET
