@@ -29,7 +29,7 @@ Real response for `00445790`, trimmed:
   "risk_score": 0,
   "risk_level": "low",
   "flags": [{ "type": "ok", "icon": "✓", "text": "Company status: Active" }],
-  "recommendation": "Proceed with confidence for standard commercial engagement...",
+  "recommendation": "No adverse indicators identified — proceed with engagement...",
   "_source": "companies-house"
 }
 ```
