@@ -9,8 +9,9 @@ const claude = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 export async function fetchCompanyProfile(number) {
   const apiKey = process.env.CH_API_KEY;
   if (!apiKey) {
-    console.error('CH_API_KEY not set — using Claude fallback');
-    return { profile: null, officers: null, filing: null, charges: null, pscs: null };
+    console.error('CH_API_KEY not set');
+    const e = new Error('Companies House is unavailable — please retry shortly');
+    e.status = 503; throw e;
   }
 
   const auth = Buffer.from(apiKey + ':').toString('base64');
@@ -18,7 +19,7 @@ export async function fetchCompanyProfile(number) {
 
   console.log(`Fetching CH data for ${number}...`);
 
-  const [profile, officers, filing, charges, pscs] = await Promise.all([
+  const [p, o, f, c, s] = await Promise.all([
     chFetch(`/company/${number}`, headers),
     chFetch(`/company/${number}/officers?items_per_page=100`, headers),
     chFetch(`/company/${number}/filing-history?items_per_page=50`, headers),
@@ -26,20 +27,31 @@ export async function fetchCompanyProfile(number) {
     chFetch(`/company/${number}/persons-with-significant-control`, headers),
   ]);
 
-  console.log(`CH profile result for ${number}:`, profile ? 'found' : 'null');
-  return { profile, officers, filing, charges, pscs };
+  if (!p.ok && p.status === 404) {
+    const e = new Error(`Company ${number} not found on the Companies House register`);
+    e.status = 404; throw e;
+  }
+  if (!p.ok) {
+    const e = new Error('Companies House is unavailable — please retry shortly');
+    e.status = 503; throw e;
+  }
+  // Sub-resources may legitimately 404 (e.g. no charges registered)
+  const val = r => (r.ok ? r.data : null);
+  return { profile: p.data, officers: val(o), filing: val(f), charges: val(c), pscs: val(s) };
 }
 
 async function chFetch(path, headers) {
   try {
     const res = await fetch(CH_BASE + path, { headers });
-    if (res.status === 404) { console.log(`CH 404: ${path}`); return null; }
-    if (res.status === 401) { console.error(`CH 401 Unauthorized: ${path} — check CH_API_KEY`); return null; }
-    if (!res.ok) { console.error(`CH ${res.status}: ${path}`); return null; }
-    return res.json();
+    if (res.status === 404) { return { ok: false, status: 404 }; }
+    if (!res.ok) {
+      console.error(`CH ${res.status}: ${path}${res.status === 401 ? ' — check CH_API_KEY' : ''}`);
+      return { ok: false, status: res.status };
+    }
+    return { ok: true, data: await res.json() };
   } catch (err) {
     console.error(`CH fetch error for ${path}:`, err.message);
-    return null;
+    return { ok: false, status: 0 };
   }
 }
 
@@ -118,9 +130,9 @@ export function computeRiskSignals(raw) {
 export async function scoreRisk(raw) {
   const { profile, officers, filing, charges, pscs } = raw;
 
-  // If Companies House data unavailable, use Claude's training knowledge
   if (!profile) {
-    return claudeFallback(raw._number || 'unknown');
+    const e = new Error('Companies House data unavailable');
+    e.status = 503; throw e;
   }
 
   const { score, signals } = computeRiskSignals(raw);
@@ -172,8 +184,7 @@ JSON shape:
   "data": [{"label":"string","value":"string"}],
   "ownership": "1-2 sentences",
   "recommendation": "one direct actionable sentence",
-  "director_disqualifications": "None identified or details",
-  "_live": true
+  "director_disqualifications": "None identified or details"
 }`;
 
   try {
@@ -186,47 +197,29 @@ JSON shape:
     const parsed = JSON.parse(text.replace(/```json|```/g, '').trim());
     parsed.risk_score = score;
     parsed.risk_level = riskLevel;
+    parsed._source = 'companies-house';
+    delete parsed._live;
     return parsed;
   } catch (err) {
-    console.error('Claude synthesis failed:', err.message);
-    return claudeFallback(profile?.company_number, score, riskLevel, signals);
+    console.error('Claude synthesis failed, returning deterministic profile:', err.message);
+    return {
+      company_number: profile.company_number,
+      company_name: profile.company_name,
+      status: profile.company_status,
+      incorporated: profile.date_of_creation,
+      sic_codes: profile.sic_codes || [],
+      registered_address: dataSummary.company.address,
+      risk_score: score,
+      risk_level: riskLevel,
+      health_summary: `Risk score ${score}/100 (${riskLevel}) computed from Companies House records.`,
+      flags: signals,
+      data: [],
+      ownership: `${dataSummary.pscs.length} PSC record(s) on file`,
+      recommendation: score >= 60 ? 'High risk — do not proceed without full due diligence.'
+        : score >= 30 ? 'Moderate risk — request latest accounts and references before committing.'
+        : 'Low risk — proceed with standard commercial terms.',
+      director_disqualifications: 'Not checked',
+      _source: 'companies-house',
+    };
   }
-}
-
-// ── Claude-only fallback (when CH data unavailable) ───────────────────────────
-async function claudeFallback(number, score, riskLevel, signals) {
-  console.log(`Using Claude fallback for ${number}`);
-  const prompt = `You are CompanyLens, a UK company risk intelligence system.
-
-Analyse UK company number ${number} using your training knowledge. For well-known companies (00445790 = Marks & Spencer, 09280351 = Deliveroo, SC070460 = Royal Bank of Scotland) use accurate facts. For unknown numbers, produce a realistic profile.
-
-Return ONLY valid JSON, no markdown:
-{
-  "company_number": "${number}",
-  "company_name": "string",
-  "status": "string",
-  "incorporated": "YYYY-MM-DD",
-  "sic_codes": ["string"],
-  "registered_address": "string",
-  "risk_score": number,
-  "risk_level": "low|medium|high",
-  "health_summary": "2-4 sentences with specific facts",
-  "flags": [{"type":"ok|warn|red","icon":"✓|⚠|✗","text":"string"}],
-  "data": [{"label":"string","value":"string"}],
-  "ownership": "1-2 sentences",
-  "recommendation": "one direct actionable sentence",
-  "director_disqualifications": "None identified",
-  "_live": true,
-  "_source": "claude-knowledge"
-}
-
-risk_level: low=0-29, medium=30-59, high=60+. Include at least 5 flags. Data grid: 7-8 rows.`;
-
-  const msg = await claude.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 1024,
-    messages: [{ role: 'user', content: prompt }],
-  });
-  const text = msg.content.find(b => b.type === 'text')?.text || '{}';
-  return JSON.parse(text.replace(/```json|```/g, '').trim());
 }
