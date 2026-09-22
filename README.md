@@ -50,7 +50,7 @@ The score (0–100) is calculated by fixed rules in `src/intelligence.js` from t
 | Incorporated < 12 months | +20 |
 | Other non-active status | +20 |
 | Accounts overdue 1–60 days | +15 |
-| No PSC recorded | +15 |
+| No PSC recorded (and not exempt or declared) | +15 |
 | Incorporated 1–2 years | +12 |
 | 3+ director resignations in 12 months | +12 |
 | Confirmation statement overdue | +10 |
