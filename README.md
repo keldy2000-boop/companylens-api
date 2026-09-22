@@ -1,162 +1,89 @@
 # CompanyLens
 
-**UK company risk intelligence — pay per query via x402 on Algorand**
-
-Returns a structured risk profile (score 0–100, flags, ownership summary, recommendation) from live Companies House data, synthesised by Claude. No API keys, subscriptions, or accounts required — payment is 0.50 USDC per request via the x402 protocol on Algorand.
+Risk profiles for UK companies, built from live Companies House data, for AI agents that need to check a counterparty before they act. Paid per lookup: **0.50 USDC via x402 on Algorand MainNet**. No account or API key.
 
 Built for the [Algorand Global x402 Challenge](https://algorand.co/global-x402-challenge).
 
----
+## Endpoint
 
-## Quick start
-
-### 1. Get your API keys
-
-| Key | Where |
-|---|---|
-| Companies House API key | [developer.company-information.service.gov.uk](https://developer.company-information.service.gov.uk) — free |
-| Anthropic API key | [console.anthropic.com](https://console.anthropic.com) |
-| Algorand wallet address | Any Algorand wallet (Pera, MyAlgo) — must be opted into USDC ASA `31566704` |
-
-### 2. Install and configure
-
-```bash
-git clone <your-repo>
-cd companylens-api
-npm install
-cp .env.example .env
-# Edit .env with your keys
+```
+GET https://companylens-api-production.up.railway.app/company/{number}
 ```
 
-### 3. Run on testnet first
+`{number}` is a Companies House registration number, e.g. `00445790` (Tesco PLC).
 
-```bash
-# In .env, set:
-# ALGORAND_NETWORK=ALGORAND_Testnet_CAIP2
-# USDC_ASA_ID=10458941
+1. Without payment the endpoint returns **HTTP 402** with the price and payment details.
+2. An x402 client pays 0.50 USDC on Algorand. The [GoPlausible facilitator](https://facilitator.goplausible.xyz) verifies and settles it and covers the network fee.
+3. The paid request returns the risk profile as JSON.
 
-npm run dev
-node src/test-payment.js
-```
+If the company doesn't exist (404) or Companies House can't be reached (503), the request fails and the payment is not settled.
 
-Get testnet USDC from [faucet.circle.com](https://faucet.circle.com) to test the full payment loop.
+## Response
 
-### 4. Switch to mainnet
+Real response for `00445790`, trimmed:
 
-```bash
-# In .env, change:
-# ALGORAND_NETWORK=ALGORAND_Mainnet_CAIP2
-# USDC_ASA_ID=31566704
-```
-
----
-
-## Deploy
-
-### Render (recommended — simplest)
-
-1. Push to GitHub
-2. New Web Service → connect repo
-3. Set env vars in Render dashboard
-4. Use `deploy/render.yaml` as reference
-
-### Railway
-
-1. Push to GitHub  
-2. New Project → Deploy from GitHub repo
-3. Set env vars in Railway dashboard
-4. Uses `deploy/railway.toml`
-
-### Manual (any VPS)
-
-```bash
-npm install
-node src/server.js
-# Recommend: pm2 start src/server.js --name companylens
-```
-
----
-
-## API
-
-### `GET /company/:number`
-
-**Payment required:** 0.50 USDC via x402 on Algorand
-
-**Parameters:**
-- `number` — Companies House number (6–8 chars, e.g. `00445790`, `SC070460`)
-
-**Response:**
 ```json
 {
   "company_number": "00445790",
-  "company_name": "MARKS AND SPENCER PLC",
-  "status": "active",
-  "incorporated": "1926-09-26",
-  "risk_score": 12,
+  "company_name": "TESCO PLC",
+  "risk_score": 15,
   "risk_level": "low",
-  "health_summary": "Long-established FTSE-listed retailer...",
-  "flags": [
-    { "type": "ok", "icon": "✓", "text": "Accounts filed on time" }
-  ],
-  "data": [
-    { "label": "Incorporated", "value": "26 Sep 1926" }
-  ],
-  "ownership": "Publicly listed — PSC reflects institutional nominee arrangements",
-  "recommendation": "Low risk. Proceed with standard commercial terms."
+  "flags": [{ "type": "ok", "icon": "✓", "text": "Company status: Active" }],
+  "recommendation": "Proceed with confidence for standard commercial engagement...",
+  "_source": "companies-house"
 }
 ```
 
-### `GET /health` — Free
+Full responses also include `status`, `incorporated`, `sic_codes`, `registered_address`, `health_summary`, `data` and `ownership`.
 
-### `GET /.well-known/x402.json` — Bazaar discovery descriptor
+## How the score works
 
-### `GET /llms.txt` — Agent discovery
+The score (0–100) is calculated by fixed rules in `src/intelligence.js` from the Companies House profile, officers, filing history, charges and PSC register. Claude then writes the summary and recommendation from that data, but cannot change the score. If Claude is unavailable, the score and flags are still returned.
 
----
-
-## How x402 payment works
-
-1. Agent calls `GET /company/00445790` with no auth
-2. Server returns `402 Payment Required` with payment terms
-3. Agent signs 0.50 USDC Algorand transaction, submits to GoPlausible facilitator
-4. Facilitator returns signed payment proof
-5. Agent retries request with `X-Payment` header
-6. Middleware verifies proof → Companies House data fetched → Claude synthesises → JSON returned
-
----
-
-## Scoring model
-
-The risk score (0–100) is computed deterministically before Claude:
-
-| Signal | Weight |
-|---|---|
+| Signal | Points |
+| --- | --- |
 | Dissolved | +50 |
-| Liquidation / administration | +45 |
-| Gazette / dissolution notice | +30 |
-| Accounts overdue >60 days | +25 |
+| Liquidation, receivership or administration | +45 |
+| Gazette or dissolution notice | +30 |
+| Accounts overdue > 60 days | +25 |
 | No active directors | +20 |
-| Incorporated <12 months | +20 |
-| Non-active status (other) | +20 |
-| No PSC recorded | +15 |
+| Incorporated < 12 months | +20 |
+| Other non-active status | +20 |
 | Accounts overdue 1–60 days | +15 |
+| No PSC recorded | +15 |
 | Incorporated 1–2 years | +12 |
 | 3+ director resignations in 12 months | +12 |
 | Confirmation statement overdue | +10 |
+| More than 8 outstanding charges | +8 |
 | Incorporated 2–5 years | +6 |
-| 1–2 director resignations in 12 months | +4 |
-| 8+ outstanding charges | +8 |
 
-Claude synthesises the summary and recommendation but cannot change the score.
+Low 0–29, medium 30–59, high 60–100.
 
----
+## Stack
 
-## Competition
+- Node.js + Express
+- x402: `@x402-avm/express`, `@x402-avm/core`, `@x402-avm/avm`, `@x402-avm/extensions` (Bazaar discovery)
+- Settlement: GoPlausible facilitator, USDC (ASA 31566704) on Algorand MainNet
+- Data: [Companies House REST API](https://developer.company-information.service.gov.uk)
+- Summaries: Anthropic Claude
 
-This project is entered in the [Algorand Global x402 Challenge](https://algorand.co/global-x402-challenge).
+## Run your own
 
-- All payments route through GoPlausible facilitator at `facilitator.goplausible.xyz`
-- Tag `x402-global-challenge` set on the endpoint
-- Submission deadline: **30 September 2026**
-- GitHub repo submitted to [Electric Capital](https://github.com/electric-capital/open-dev-data)
+```
+npm install
+```
+
+Set these environment variables (see `.env.example`):
+
+- `CH_API_KEY`: Companies House **REST** API key
+- `ANTHROPIC_API_KEY`: Anthropic API key
+- `WALLET_ADDRESS`: Algorand MainNet address opted in to USDC (ASA 31566704)
+- `FACILITATOR_URL`: `https://facilitator.goplausible.xyz`
+
+```
+npm start
+```
+
+Free routes: `/health`, `/llms.txt`, `/.well-known/x402.json`.
+
+Data from Companies House. Not financial or legal advice.
