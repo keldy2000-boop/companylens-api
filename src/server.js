@@ -31,7 +31,7 @@ app.use((req, res, next) => {
   res.header('Access-Control-Allow-Origin', '*');
   res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.header('Access-Control-Allow-Headers', '*');
-  res.header('Access-Control-Expose-Headers', '*');
+  res.header('Access-Control-Expose-Headers', 'PAYMENT-REQUIRED, PAYMENT-RESPONSE, X-PAYMENT-RESPONSE');
   if (req.method === 'OPTIONS') return res.sendStatus(200);
   next();
 });
