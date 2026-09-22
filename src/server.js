@@ -134,4 +134,22 @@ app.get('/llms.txt', (req, res) => {
 Payment: 0.50 USDC per request via x402 on Algorand mainnet. No API keys required.
 
 ## Endpoint
-GET
+GET /company/{number}
+Returns: risk_score (0-100), risk_level, flags, ownership, recommendation
+`);
+});
+
+app.get('/', (req, res) => {
+  try {
+    res.type('html').send(readFileSync(join(__dirname, '../public/index.html'), 'utf8'));
+  } catch {
+    res.json({ service: 'CompanyLens', health: '/health', endpoint: '/company/:number' });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`CompanyLens running on port ${PORT}`);
+  console.log(`Network: ${NETWORK}`);
+  console.log(`Wallet:  ${WALLET.slice(0, 8)}...`);
+  console.log(`Facilitator: ${FACILITATOR}`);
+});
