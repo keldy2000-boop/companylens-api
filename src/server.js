@@ -110,7 +110,7 @@ app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
     service: 'CompanyLens',
-    version: '1.2.0',
+    version: '1.3.0',
     network: NETWORK,
     price: '0.50 USDC per lookup',
     wallet: `${WALLET.slice(0, 8)}...`,
