@@ -19,12 +19,14 @@ export async function fetchCompanyProfile(number) {
 
   console.log(`Fetching CH data for ${number}...`);
 
-  const [p, o, f, c, s] = await Promise.all([
+  const [p, o, f, c, s, st, ex] = await Promise.all([
     chFetch(`/company/${number}`, headers),
     chFetch(`/company/${number}/officers?items_per_page=100`, headers),
     chFetch(`/company/${number}/filing-history?items_per_page=50`, headers),
     chFetch(`/company/${number}/charges`, headers),
     chFetch(`/company/${number}/persons-with-significant-control`, headers),
+    chFetch(`/company/${number}/persons-with-significant-control-statements`, headers),
+    chFetch(`/company/${number}/exemptions`, headers),
   ]);
 
   if (!p.ok && p.status === 404) {
@@ -37,7 +39,7 @@ export async function fetchCompanyProfile(number) {
   }
   // Sub-resources may legitimately 404 (e.g. no charges registered)
   const val = r => (r.ok ? r.data : null);
-  return { profile: p.data, officers: val(o), filing: val(f), charges: val(c), pscs: val(s) };
+  return { profile: p.data, officers: val(o), filing: val(f), charges: val(c), pscs: val(s), pscStatements: val(st), exemptions: val(ex) };
 }
 
 async function chFetch(path, headers) {
@@ -53,6 +55,27 @@ async function chFetch(path, headers) {
     console.error(`CH fetch error for ${path}:`, err.message);
     return { ok: false, status: 0 };
   }
+}
+
+// Ownership position: PSCs on record, exempt (listed), declared statement, or unexplained
+export function ownershipPosition(raw) {
+  const pscItems = raw.pscs?.items || [];
+  const activePscs = pscItems.filter(p => !p.ceased_on);
+  if (activePscs.length > 0) return { kind: 'pscs', count: activePscs.length };
+  if (pscItems.some(p => p.kind?.includes('super-secure'))) return { kind: 'protected' };
+
+  const ex = raw.exemptions?.exemptions || {};
+  const active = Object.entries(ex).find(([key, val]) =>
+    /psc|disclosure_transparency/.test(key) &&
+    (!Array.isArray(val?.items) || val.items.some(i => !i.exempt_to)));
+  if (active) return { kind: 'exempt', type: active[0] };
+
+  const statements = (raw.pscStatements?.items || []).filter(x => !x.ceased_on).map(x => x.statement);
+  if (statements.length) {
+    const declaredNone = statements.some(x => /no-individual-or-entity-with-si/.test(x));
+    return { kind: declaredNone ? 'declared-none' : 'statement', statements };
+  }
+  return { kind: 'unexplained' };
 }
 
 // ── 2. DETERMINISTIC RISK SCORING ────────────────────────────────────────────
@@ -111,12 +134,19 @@ export function computeRiskSignals(raw) {
   else if (recentResignations.length >= 3) { score += 12; signals.push({ type: 'warn', icon: '⚠', text: `${recentResignations.length} director resignations in last 12 months`, weight: 12 }); }
   else { signals.push({ type: 'ok', icon: '✓', text: `${activeDirectors.length} active directors` }); }
 
-  const pscItems = pscs?.items || [];
-  const activePscs = pscItems.filter(p => !p.ceased_on);
-  if (activePscs.length === 0 && !pscItems.some(p => p.kind?.includes('super-secure'))) {
-    score += 15; signals.push({ type: 'warn', icon: '⚠', text: 'No PSC recorded — ownership unclear', weight: 15 });
+  const own = ownershipPosition(raw);
+  if (own.kind === 'pscs') {
+    signals.push({ type: 'ok', icon: '✓', text: `${own.count} PSC(s) on record` });
+  } else if (own.kind === 'protected') {
+    signals.push({ type: 'ok', icon: '✓', text: 'PSC details protected from public view' });
+  } else if (own.kind === 'exempt') {
+    signals.push({ type: 'ok', icon: '✓', text: 'Exempt from the PSC register (shares traded on a regulated market)' });
+  } else if (own.kind === 'declared-none') {
+    signals.push({ type: 'ok', icon: '✓', text: 'Company has declared no person with significant control' });
+  } else if (own.kind === 'statement') {
+    score += 15; signals.push({ type: 'warn', icon: '⚠', text: `PSC statement filed: ${own.statements[0].replace(/-/g, ' ')}`, weight: 15 });
   } else {
-    signals.push({ type: 'ok', icon: '✓', text: `${activePscs.length} PSC(s) on record` });
+    score += 15; signals.push({ type: 'warn', icon: '⚠', text: 'No PSC recorded — ownership unclear', weight: 15 });
   }
 
   const gazetteNotice = (filing?.items || []).some(f => f.type?.includes('GAZ') || f.description?.toLowerCase().includes('gazette'));
@@ -159,6 +189,7 @@ export async function scoreRisk(raw) {
       satisfied: (charges?.items || []).filter(c => c.status === 'fully-satisfied').length,
     },
     pscs: (pscs?.items || []).map(p => ({ name: p.name, kind: p.kind, nature: p.natures_of_control, ceased: p.ceased_on })),
+    ownership_position: ownershipPosition(raw),
     recent_filings: (filing?.items || []).slice(0, 8).map(f => ({ type: f.type, date: f.date, description: f.description?.slice(0, 60) })),
   };
 
