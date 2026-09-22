@@ -26,7 +26,7 @@ Real response for `00445790`, trimmed:
 {
   "company_number": "00445790",
   "company_name": "TESCO PLC",
-  "risk_score": 15,
+  "risk_score": 0,
   "risk_level": "low",
   "flags": [{ "type": "ok", "icon": "✓", "text": "Company status: Active" }],
   "recommendation": "Proceed with confidence for standard commercial engagement...",
